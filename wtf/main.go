@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/go-gl/gl"
 	glfw "github.com/go-gl/glfw3"
@@ -11,9 +12,14 @@ import (
 const (
 	Title         string = "Where's the Refrigerator?"
 	Width, Height int    = 640, 480
+	FPSLimit      int64  = 60
 )
 
-var texture gl.Texture
+var (
+	texture  gl.Texture
+	delta    time.Duration
+	lastTime time.Time
+)
 
 func errorCallback(err glfw.ErrorCode, desc string) {
 	fmt.Printf("%v: %v\n", err, desc)
@@ -44,7 +50,9 @@ func main() {
 	defer destroyScene()
 
 	for !window.ShouldClose() {
+		updateDelta()
 		draw(window)
+		waitToLimitFps()
 		window.SwapBuffers()
 		glfw.PollEvents()
 	}
@@ -77,6 +85,11 @@ func destroyScene() {
 var x, y float32 = 0, 0
 var w, h float32 = 526.0, 526.0
 
+func updateDelta() {
+	delta = time.Now().Sub(lastTime)
+	lastTime = time.Now()
+}
+
 func draw(window *glfw.Window) {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
@@ -101,7 +114,7 @@ func draw(window *glfw.Window) {
 
 	gl.PopMatrix()
 
-	increment := float32(0.005)
+	increment := float32(1 * delta.Seconds())
 	if window.GetKey(glfw.KeyW) == glfw.Press {
 		y += increment
 	}
@@ -114,4 +127,9 @@ func draw(window *glfw.Window) {
 	if window.GetKey(glfw.KeyD) == glfw.Press {
 		x += increment
 	}
+}
+
+func waitToLimitFps() {
+	frameTimeTarget := time.Second / time.Duration(FPSLimit)
+	time.Sleep(frameTimeTarget - delta)
 }
